@@ -1,17 +1,45 @@
 package org.example;
 
-//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
-// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
+/**
+ * MultiThreadAndParallelismWorkSpace - Ana Başlangıç Sınıfı
+ *
+ * Bu proje Java'da Multi-Threading ve Parallelism konularını öğrenmek için oluşturulmuştur.
+ *
+ * Farklı modüller:
+ * - basics: Thread temelleri ve yaşam döngüsü
+ * - synchronization: Senkronizasyon mekanizmaları
+ * - executors: Executor framework ve thread pool'lar
+ * - concurrent: Concurrent collections kullanımı
+ * - parallelism: Parallel streams ve fork/join framework
+ * - problems: Klasik concurrency problemleri ve çözümleri
+ *
+ * @author Arda Aydın Kılınç
+ * @version 1.0
+ */
 public class Main {
     public static void main(String[] args) {
-        //TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
-        // to see how IntelliJ IDEA suggests fixing it.
-        System.out.printf("Hello and welcome!");
+        System.out.println("╔════════════════════════════════════════════════════════╗");
+        System.out.println("║   Multi-Threading & Parallelism WorkSpace             ║");
+        System.out.println("║   Java Concurrency Öğrenme Projesi                    ║");
+        System.out.println("╚════════════════════════════════════════════════════════╝");
+        System.out.println();
+        System.out.println("Proje başarıyla çalışıyor!");
+        System.out.println("Farklı paketlerdeki örnekleri inceleyebilirsiniz:");
+        System.out.println("  • org.example.basics - Thread temelleri");
+        System.out.println("  • org.example.synchronization - Senkronizasyon");
+        System.out.println("  • org.example.executors - Executor framework");
+        System.out.println("  • org.example.concurrent - Concurrent collections");
+        System.out.println("  • org.example.parallelism - Parallel processing");
+        System.out.println("  • org.example.problems - Klasik concurrency problemleri");
+        System.out.println();
 
-        for (int i = 1; i <= 5; i++) {
-            //TIP Press <shortcut actionId="Debug"/> to start debugging your code. We have set one <icon src="AllIcons.Debugger.Db_set_breakpoint"/> breakpoint
-            // for you, but you can always add more by pressing <shortcut actionId="ToggleLineBreakpoint"/>.
-            System.out.println("i = " + i);
-        }
+        // Thread bilgisi göster
+        Thread currentThread = Thread.currentThread();
+        System.out.println("Şu anda çalışan thread:");
+        System.out.println("  → İsim: " + currentThread.getName());
+        System.out.println("  → ID: " + currentThread.threadId());
+        System.out.println("  → Öncelik: " + currentThread.getPriority());
+        System.out.println("  → Thread Group: " + currentThread.getThreadGroup().getName());
+        System.out.println("  → Aktif thread sayısı: " + Thread.activeCount());
     }
 }
