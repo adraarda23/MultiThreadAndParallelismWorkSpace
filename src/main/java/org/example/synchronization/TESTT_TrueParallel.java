@@ -1,4 +1,4 @@
-package org.example.basics;
+package org.example.synchronization;
 
 public class TESTT_TrueParallel {
 
