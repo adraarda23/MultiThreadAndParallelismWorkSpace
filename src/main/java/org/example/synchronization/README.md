@@ -13,6 +13,8 @@ Bu modül, Java'da multi-threading ortamlarında karşılaşılan **race conditi
 7. [TESTT_DeadlockSolution.java](#7-testt_deadlocksolutionjava---deadlock-çözümleri) - Deadlock Çözümleri
 8. [TESTT_WaitNotify.java](#8-testt_waitnotifyjava---wait-ve-notify) - wait() ve notify()
 9. [TESTT_ProducerConsumer.java](#9-testt_producerconsumerjava---producer-consumer-pattern) - Producer-Consumer Pattern
+10. [TESTT_ThreadPools.java](#10-testt_threadpoolsjava---thread-pools-executor-framework) - Thread Pools (Executor Framework)
+11. [TESTT_CallableFuture.java](#11-testt_callablefuturejava---callable-ve-future) - Callable ve Future
 
 ---
 
@@ -809,6 +811,418 @@ Bu örnekleri çalıştırarak şunları öğreneceksiniz:
 
 ---
 
+---
+
+## 10. TESTT_ThreadPools.java - Thread Pools (Executor Framework)
+
+### Amaç
+**Thread Pool** kullanarak thread yönetimini göstermek. Her görev için yeni thread yaratmak yerine hazır thread'leri kullanmak.
+
+### Thread Pool Nedir?
+
+Önceden oluşturulmuş thread'lerin bulunduğu havuz. Görevler geldiğinde hazır thread'ler işleri alır.
+
+**Neden Thread Pool?**
+- Thread yaratma maliyeti yüksek (her seferinde new Thread() pahalı)
+- Thread sayısını kontrol eder (binlerce thread sistem çökertir)
+- Task queue ile iş yönetimi
+
+### Executor Tipleri
+
+#### 1. SingleThreadExecutor
+
+**1 thread**, görevler **sırayla** işlenir.
+
+```java
+ExecutorService executor = Executors.newSingleThreadExecutor();
+
+executor.submit(() -> System.out.println("Task 1"));
+executor.submit(() -> System.out.println("Task 2"));
+
+// Çıktı: Task 1, Task 2 (sırayla)
+```
+
+**Kullanım**: Log yazma, sıralı işlemler
+
+#### 2. FixedThreadPool
+
+**N thread**, görevler **paralel** işlenir.
+
+```java
+ExecutorService executor = Executors.newFixedThreadPool(3);
+
+for (int i = 0; i < 10; i++) {
+    executor.submit(() -> doWork());
+}
+
+// 10 görev, 3'er 3'er paralel işlenir
+```
+
+**Kullanım**: Web server, CPU-intensive işler
+
+#### 3. CachedThreadPool
+
+**İhtiyaca göre thread** oluşturur. Thread 60 saniye boşsa yok edilir.
+
+```java
+ExecutorService executor = Executors.newCachedThreadPool();
+
+for (int i = 0; i < 100; i++) {
+    executor.submit(() -> quickTask());
+}
+
+// İhtiyaç kadar thread oluşturur
+```
+
+**Kullanım**: Çok sayıda kısa süreli görev, I/O işlemleri
+
+#### 4. ScheduledThreadPool
+
+**Zamanlı/periyodik** görevler için.
+
+```java
+ScheduledExecutorService executor = Executors.newScheduledThreadPool(2);
+
+// 2 saniye sonra çalıştır
+executor.schedule(() -> task(), 2, TimeUnit.SECONDS);
+
+// 1 saniye sonra başla, her 5 saniyede tekrarla
+executor.scheduleAtFixedRate(() -> task(), 1, 5, TimeUnit.SECONDS);
+```
+
+**Kullanım**: Cron job, periyodik temizlik, health check
+
+### submit() vs execute()
+
+```java
+// execute(): Void, sonuç dönmez
+executor.execute(() -> doWork());
+
+// submit(): Future döner, sonuç alabilirsin
+Future<Integer> future = executor.submit(() -> {
+    return 42;
+});
+
+Integer result = future.get();  // Bekler, sonucu alır
+```
+
+### shutdown() vs shutdownNow()
+
+```java
+// shutdown(): Mevcut görevleri bitir, yeni görev alma
+executor.shutdown();
+executor.awaitTermination(10, TimeUnit.SECONDS);
+
+// shutdownNow(): Tüm görevleri kes, hemen kapat
+executor.shutdownNow();
+```
+
+### Karşılaştırma
+
+| Executor Tipi | Thread Sayısı | Kullanım |
+|---------------|---------------|----------|
+| SingleThreadExecutor | 1 | Sıralı işlemler |
+| FixedThreadPool(N) | N (sabit) | Paralel işlemler, CPU-intensive |
+| CachedThreadPool | İhtiyaca göre | Kısa süreli çok görev, I/O |
+| ScheduledThreadPool | N (sabit) | Zamanlı/periyodik görevler |
+
+### Manuel Thread vs Thread Pool
+
+```java
+// ❌ Manuel (her seferinde thread yarat)
+for (int i = 0; i < 1000; i++) {
+    new Thread(() -> doWork()).start();  // 1000 thread!
+}
+
+// ✅ Thread Pool (hazır thread'leri kullan)
+ExecutorService executor = Executors.newFixedThreadPool(10);
+for (int i = 0; i < 1000; i++) {
+    executor.submit(() -> doWork());  // 10 thread, 1000 görevi işler
+}
+```
+
+### Çalıştırma
+```bash
+java org.example.synchronization.TESTT_ThreadPools
+```
+
+### Beklenen Çıktı
+```
+=== 1. SingleThreadExecutor ===
+Task-1 başladı - Thread: pool-1-thread-1
+Task-1 bitti
+Task-2 başladı - Thread: pool-1-thread-1
+Task-2 bitti
+...
+
+=== 2. FixedThreadPool (3 thread) ===
+Task-1 başladı - Thread: pool-2-thread-1
+Task-2 başladı - Thread: pool-2-thread-2
+Task-3 başladı - Thread: pool-2-thread-3
+(3 görev paralel)
+```
+
+---
+
+## 11. TESTT_CallableFuture.java - Callable ve Future
+
+### Amaç
+**Callable** ve **Future** kullanarak asenkron işlemlerden **sonuç almayı** göstermek.
+
+### Runnable vs Callable
+
+**Runnable**: Sonuç dönmez, exception fırlatamaz
+```java
+Runnable task = () -> {
+    System.out.println("İş yapıyorum");
+    // void, sonuç yok
+};
+```
+
+**Callable**: Sonuç döner, exception fırlatabilir
+```java
+Callable<Integer> task = () -> {
+    return 42;  // Sonuç döner
+};
+```
+
+### Future Nedir?
+
+**Asenkron bir işlemin sonucunu temsil eden nesne.**
+
+```java
+ExecutorService executor = Executors.newSingleThreadExecutor();
+
+Future<Integer> future = executor.submit(() -> {
+    Thread.sleep(2000);
+    return 42;
+});
+
+// Main thread devam ediyor...
+System.out.println("Sonucu bekliyorum...");
+
+Integer result = future.get();  // BLOKLAR, sonucu bekler
+System.out.println("Sonuç: " + result);
+```
+
+### Future Metodları
+
+#### get() - Bloklar
+
+```java
+Integer result = future.get();  // Sonuç gelene kadar BEKLER
+```
+
+**Sorun**: Main thread durur, bekler!
+
+#### get(timeout) - Timeout ile Bekle
+
+```java
+try {
+    Integer result = future.get(5, TimeUnit.SECONDS);
+} catch (TimeoutException e) {
+    System.out.println("5 saniyede bitmedi!");
+    future.cancel(true);
+}
+```
+
+#### cancel() - İptal Et
+
+```java
+future.cancel(true);  // true: Thread'i interrupt et
+
+if (future.isCancelled()) {
+    System.out.println("İptal edildi");
+}
+```
+
+#### isDone() - Bitti mi?
+
+```java
+while (!future.isDone()) {
+    System.out.println("Henüz bitmedi...");
+    Thread.sleep(500);
+}
+
+Integer result = future.get();  // Artık hemen dönecek
+```
+
+### invokeAll() - Tüm Görevler
+
+Tüm görevleri çalıştır, **hepsi bitene kadar bekle**.
+
+```java
+List<Callable<Integer>> tasks = Arrays.asList(
+    () -> task1(),
+    () -> task2(),
+    () -> task3()
+);
+
+List<Future<Integer>> futures = executor.invokeAll(tasks);
+
+// Tüm görevler bitti
+for (Future<Integer> f : futures) {
+    Integer result = f.get();  // Hemen dönecek
+}
+```
+
+### invokeAny() - İlk Biten Kazanır
+
+İlk biten görevin sonucunu döner, **diğerlerini iptal eder**.
+
+```java
+List<Callable<String>> tasks = Arrays.asList(
+    () -> slowTask(),   // 5 saniye
+    () -> fastTask(),   // 1 saniye ⚡
+    () -> normalTask()  // 3 saniye
+);
+
+String result = executor.invokeAny(tasks);
+// fastTask() kazanır, diğerleri iptal edilir
+```
+
+### Exception Handling
+
+```java
+Future<Integer> future = executor.submit(() -> {
+    throw new RuntimeException("Hata!");
+});
+
+try {
+    Integer result = future.get();
+} catch (ExecutionException e) {
+    System.out.println("Task içinde exception: " + e.getCause());
+}
+```
+
+Exception **get()** çağrıldığında fırlatılır!
+
+### Future'ın Sınırlamaları
+
+1. **get() bloklar**: Main thread durur
+2. **Chaining yok**: Birden fazla Future'ı birleştiremezsin
+3. **Callback yok**: İşlem bitince otomatik çalışacak kod yazamazsın
+4. **Composition zor**: f1 bitince f2'yi çalıştır gibi senaryolar
+
+**Çözüm**: `CompletableFuture` (Java 8+)
+
+### Çalıştırma
+```bash
+java org.example.synchronization.TESTT_CallableFuture
+```
+
+### Beklenen Çıktı
+```
+=== 1. Runnable vs Callable ===
+Runnable: Sonuç dönmüyor
+Callable: Hesaplama yapılıyor...
+Sonuç: 42
+
+=== 2. Future.get() Bloklaması ===
+Main thread devam ediyor...
+Şimdi sonucu bekliyorum (get() bloklar)...
+Task başladı, 3 saniye sürecek...
+Task bitti!
+Sonuç: 100
+```
+
+---
+
+## Performans Karşılaştırması (Final)
+
+| Örnek | Thread Safety | Paralellik | Deadlock Risk | Koordinasyon | Performans |
+|-------|---------------|------------|---------------|--------------|------------|
+| TESTT | ❌ Yok | ✅ Var (ama yanlış sonuç) | ❌ Yok | ❌ Yok | ⚡ En hızlı |
+| TESTT_Synchronized | ✅ Var | ❌ Yok (lock contention) | ❌ Yok | ❌ Yok | 🐌 En yavaş |
+| TESTT_MultipleCounters | ✅ Var | ❌ Yok (gereksiz lock contention) | ❌ Yok | ❌ Yok | 🐌 Yavaş |
+| TESTT_TrueParallel | ✅ Var | ✅ Var (farklı lock'lar) | ⚠️ Var (nested locks) | ❌ Yok | ⚡ Hızlı |
+| TESTT_InstanceBased | ✅ Var | ❌ Yok (shared instance) | ❌ Yok | ❌ Yok | 🐌 Yavaş |
+| TESTT_Deadlock | ✅ Var | ❌ Yok | ⚠️ VAR (DEMO) | ❌ Yok | ❌ Kilitlenir |
+| TESTT_DeadlockSolution | ✅ Var | ✅ Değişken | ❌ Yok | ❌ Yok | ✅ İyi |
+| TESTT_WaitNotify | ✅ Var | ❌ Yok (sıralı çalışma) | ❌ Yok | ✅ Var | 🐌 Yavaş |
+| TESTT_ProducerConsumer | ✅ Var | ✅ Var (buffer ile) | ❌ Yok | ✅ Var | ✅ İyi |
+| TESTT_ThreadPools | ✅ Var | ✅ Var (pool'a göre) | ❌ Yok | ✅ Var | ⚡⚡ Çok hızlı |
+
+---
+
+## Temel Kavramlar (Final)
+
+### Thread Pool
+Önceden oluşturulmuş thread'lerin bulunduğu havuz. Thread yaratma maliyetini azaltır ve thread sayısını kontrol eder.
+
+### Executor Framework
+Java'da thread pool yönetimi için kullanılan framework. `ExecutorService`, `ScheduledExecutorService` gibi arayüzler sağlar.
+
+### Task Queue
+Thread pool'da bekleyen görevlerin tutulduğu kuyruk. Thread boşaldığında kuyruktan görev alır.
+
+### Future
+`submit()` metodunun döndürdüğü nesne. Görevin sonucunu almak için `get()` metodunu kullanırız.
+
+---
+
+## Best Practices (Final)
+
+1. **Minimize Lock Scope**: Lock'u sadece gerekli olan kod bloğunda kullanın
+
+2. **Use Separate Locks**: İlgisiz resource'lar için farklı lock'lar kullanın
+
+3. **Prefer Higher-Level Concurrency Utilities**: Modern Java'da `java.util.concurrent` paketini kullanın:
+   - `AtomicInteger` (lock-free counter)
+   - `ReentrantLock` (daha esnek locking)
+   - `ConcurrentHashMap` (thread-safe map)
+   - `BlockingQueue` (Producer-Consumer için)
+   - **`ExecutorService` (Thread pool yönetimi)**
+
+4. **Avoid Nested Locks**: Deadlock riskini azaltmak için iç içe lock kullanımından kaçının
+
+5. **Always Use Lock Ordering**: Eğer nested lock kullanmak zorundasanız, her zaman aynı sırada kilitleyin
+
+6. **Use Timeout with Locks**: ReentrantLock kullanıyorsanız tryLock(timeout) tercih edin
+
+7. **Monitor Thread States**: Production'da thread dump'ları düzenli alın ve BLOCKED thread'leri izleyin
+
+8. **Always use while with wait()**: Koşul kontrolü her zaman while ile yapın, if ile değil
+
+9. **Prefer notifyAll() over notify()**: Birden fazla türde thread bekleyebilir, notifyAll() daha güvenli
+
+10. **Use BlockingQueue for Producer-Consumer**: wait/notify yerine BlockingQueue kullanın
+
+11. **Use Thread Pools**: Manuel thread yaratmak yerine ExecutorService kullanın
+    - Fixed size görevler için `FixedThreadPool`
+    - Kısa süreli çok görev için `CachedThreadPool`
+    - Zamanlı görevler için `ScheduledThreadPool`
+
+12. **Always shutdown() executors**: Memory leak önlemek için executor'ları kapatın
+
+---
+
+## Öğrenme Hedefleri (Final)
+
+Bu örnekleri çalıştırarak şunları öğreneceksiniz:
+
+- ✅ Race condition'ın nasıl oluştuğunu
+- ✅ Synchronized anahtar kelimesinin nasıl çalıştığını
+- ✅ Lock contention'ın performans etkisini
+- ✅ Gerçek paralellik için doğru lock stratejisini
+- ✅ Instance-based vs class-based synchronization farkını
+- ✅ Deadlock'ın nasıl oluştuğunu ve 4 koşulunu
+- ✅ Deadlock'tan kaçınmanın farklı yöntemlerini
+- ✅ Lock ordering, timeout ve ID sıralama stratejilerini
+- ✅ wait() ve notify() kullanımını
+- ✅ Thread'ler arası iletişim tekniklerini
+- ✅ Producer-Consumer pattern implementasyonunu
+- ✅ Bounded buffer kullanımını
+- ✅ notifyAll() vs notify() farkını
+- ✅ Spurious wakeup ve while loop gerekliliğini
+- ✅ Thread Pool'ların nasıl çalıştığını
+- ✅ Executor Framework kullanımını
+- ✅ Farklı executor tiplerini ve kullanım alanlarını
+- ✅ submit() vs execute() farkını
+- ✅ shutdown() vs shutdownNow() farkını
+
+---
+
 ## İleri Okuma
 
 - [Java Concurrency Tutorial - Oracle](https://docs.oracle.com/javase/tutorial/essential/concurrency/)
@@ -817,3 +1231,5 @@ Bu örnekleri çalıştırarak şunları öğreneceksiniz:
 - [Deadlock Detection with jstack](https://docs.oracle.com/javase/8/docs/technotes/guides/troubleshoot/tooldescr016.html)
 - [Guarded Blocks and wait/notify](https://docs.oracle.com/javase/tutorial/essential/concurrency/guardmeth.html)
 - [Producer-Consumer Problem](https://en.wikipedia.org/wiki/Producer%E2%80%93consumer_problem)
+- [Executor Framework Guide](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/Executor.html)
+- [Thread Pools in Java](https://www.baeldung.com/thread-pool-java-and-guava)
